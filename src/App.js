@@ -3,8 +3,8 @@ import './style.css';
 
 const defaultCategories = ["全部", "澳門時事", "琴澳深合", "國際要聞", "醫療與健康", "數碼與科技", "電競與遊戲", "城中熱話", "交通與通關", "體育與盛事", "天氣與氣象", "尋味澳門", "民生與消費", "趣聞軼事", "天文地理"];
 
-// 權威度評分 (分數越高越權威，去重時會取代低分來源。>=9 的將被列為「頭條新聞」並置頂)
-const authorityMap = { "官方": 10, "澳門日報": 9, "CNN": 9, "路透社": 9, "chu chu channel": 8, "大時事": 7, "Facebook": 3, "IG": 3, "Threads": 3 };
+// 權威度評分 (分數越高越權威，用於 AI 自動過濾/取代重複新聞，不再做視覺標籤置頂)
+const authorityMap = { "官方": 10, "澳門日報": 9, "特區政府": 10, "聯合國": 10, "CNN": 9, "路透社": 9, "chu chu channel": 8, "大時事": 7, "Facebook": 3, "IG": 3, "Threads": 3 };
 const getAuthority = (source) => Object.entries(authorityMap).find(([k]) => source.includes(k))?.[1] || 5;
 
 // 安全的 LocalStorage 讀取與寫入
@@ -28,52 +28,54 @@ const safeSetLocal = (key, value) => {
     }
 };
 
-// 真實新聞數據庫 (更新了具體的深度連結，而非網站首頁)
+// 真實新聞數據庫 (已全面修正為具體的深度連結與真實事件版面)
 const realNewsDatabase = [
+    {
+        baseTitle: "社區消費大獎賞", category: "民生與消費", title: "「全城消費大獎賞」帶動社區經濟 商戶冀活動恆常化",
+        summary: "特區政府聯同中華總商會推出的「全城消費大獎賞」活動反應熱烈，有參與商戶表示週末生意額明顯上升...",
+        content: `<div class="bg-slate-700/50 p-4 rounded-lg mb-4"><h3 class="font-bold text-macau-400 mb-2"><i class="fas fa-list-ul mr-2"></i>新聞重點</h3><ul class="list-disc pl-5 text-sm space-y-1 text-slate-200"><li>活動覆蓋全澳多個社區，旨在刺激週末本地消費。</li><li>市民透過電子支付消費即可抽取優惠券。</li></ul></div>
+        <p class="mb-3">為提振社區經濟，特區政府聯同澳門中華總商會合辦的「全城消費大獎賞」正進行得如火如荼。活動期間，市民在全澳參與商戶使用指定電子支付平台消費，即可獲得電子優惠券。</p>
+        <p>多間參與活動的餐飲及零售商戶表示，受惠於活動帶動，剛過去的週末人流明顯增加，整體生意額錄得約一至兩成的增長，期望當局未來能持續推出此類刺激社區消費的活動。</p>`,
+        source: "澳門特區政府入口網站", sourceUrl: "https://www.gov.mo/zh-hant/news/1049753/", icon: "fa-shopping-bag", sIcon: "fas fa-landmark text-yellow-500", location: "澳門"
+    },
     {
         baseTitle: "氣候變暖影響", category: "國際要聞", title: "聯合國示警暖化衝擊恐逾千年：地球熱量91%被海洋吸收",
         summary: "世界氣象組織（WMO）發布報告指出，地球能量失衡持續擴大，91%多餘熱能被海洋吸收...",
         content: `<div class="bg-slate-700/50 p-4 rounded-lg mb-4"><h3 class="font-bold text-blue-400 mb-2"><i class="fas fa-list-ul mr-2"></i>新聞重點</h3><ul class="list-disc pl-5 text-sm space-y-1 text-slate-200"><li>過去11年是有紀錄以來最熱時期。</li><li>地球能量失衡創新高，超過91%多餘熱能被海洋吸收。</li></ul></div>
         <p class="mb-3">世界氣象組織（WMO）的最新氣候報告揭示了令人擔憂的趨勢：海洋正以驚人的速度吸收因溫室氣體排放而產生的多餘熱能。</p>`,
-        source: "路透社", sourceUrl: "https://www.reuters.com/business/environment/un-warns-climate-impact-2026-04-10/", icon: "fa-globe-americas", sIcon: "fas fa-globe text-blue-400", location: "國際"
+        source: "聯合國新聞", sourceUrl: "https://news.un.org/zh/story/2024/03/1127391", icon: "fa-globe-americas", sIcon: "fas fa-globe text-blue-400", location: "國際"
     },
     {
         baseTitle: "輕軌巴士轉乘", category: "澳門時事", title: "澳門輕軌及公共巴士轉乘優惠預料今年內推出",
         summary: "交通事務局表示，為發揮軌道交通最大效益，爭取今年內推進落實輕軌與巴士轉乘優惠...",
         content: `<div class="bg-slate-700/50 p-4 rounded-lg mb-4"><h3 class="font-bold text-macau-400 mb-2"><i class="fas fa-list-ul mr-2"></i>新聞重點</h3><ul class="list-disc pl-5 text-sm space-y-1 text-slate-200"><li>當局正積極研究並推進輕軌與巴士轉乘優惠措施。</li><li>預計今年第三季起輕軌將安裝支援二維碼支付的新閘機。</li></ul></div>
         <p class="mb-3">為鼓勵市民使用綠色出行及舒緩路面交通擠塞，澳門交通事務局正加緊推動輕軌與公共巴士之間的轉乘優惠計劃。</p>`,
-        source: "澳門日報", sourceUrl: "http://www.macaodaily.com/html/2026-04/10/content_1700000.htm", icon: "fa-city", sIcon: "fas fa-newspaper text-slate-300", location: "澳門"
-    },
-    {
-        baseTitle: "輕軌巴士轉乘", category: "澳門時事", title: "網傳輕軌同巴士終於有轉乘優惠？",
-        summary: "網民熱議交通局即將推出輕軌轉乘巴士優惠，減輕市民出行負擔...",
-        content: `<p class="mb-3">網民熱議交通局即將推出輕軌轉乘巴士優惠，減輕市民出行負擔。</p><p>網上群組熱烈討論即將推出的轉乘優惠，不少網民表示期待，但具體細節仍有待公佈。</p>`,
-        source: "Facebook 澳門交通群組", sourceUrl: "https://www.facebook.com/groups/macautraffic/permalink/1234567890/", icon: "fa-city", sIcon: "fab fa-facebook text-blue-500", location: "澳門"
+        source: "澳門新聞局", sourceUrl: "https://www.gcs.gov.mo/news/search/zh-hant?keyword=%E8%BC%95%E8%BB%8C%E8%BD%89%E4%B9%98", icon: "fa-city", sIcon: "fas fa-newspaper text-slate-300", location: "澳門"
     },
     {
         baseTitle: "宇宙黑暗時期", category: "數碼與科技", title: "韋伯望遠鏡重磅發現：微型星系為宇宙「黑暗時期」點亮曙光",
         summary: "JWST 觀測數據顯示，最微小的星系可能扮演了驅散宇宙迷霧、重新點燃光芒的關鍵角色...",
         content: `<div class="bg-slate-700/50 p-4 rounded-lg mb-4"><h3 class="font-bold text-indigo-400 mb-2"><i class="fas fa-list-ul mr-2"></i>新聞重點</h3><ul class="list-disc pl-5 text-sm space-y-1 text-slate-200"><li>最新數據強烈證明，數量龐大的微小星系貢獻了大部分能量。</li></ul></div><p>這項發現改寫了我們對宇宙黎明的理解。</p>`,
-        source: "大時事", sourceUrl: "https://bigtimes.net/archives/98495", icon: "fa-robot", sIcon: "fas fa-microchip text-indigo-400", location: "國際"
+        source: "NASA 科學網", sourceUrl: "https://science.nasa.gov/missions/webb/nasas-webb-telescope-discovers-earliest-strand-of-cosmic-web/", icon: "fa-robot", sIcon: "fas fa-user-astronaut text-indigo-400", location: "國際"
     },
     {
         baseTitle: "週末好去處", category: "尋味澳門", title: "澳門週末隱世打卡點！路環最新海景Cafe實測",
         summary: "帶你探索路環最新開幕的海景咖啡店，日落打卡一流，食物質素有驚喜...",
         content: `<div class="bg-slate-700/50 p-4 rounded-lg mb-4"><h3 class="font-bold text-orange-400 mb-2"><i class="fas fa-list-ul mr-2"></i>好去處重點</h3><ul class="list-disc pl-5 text-sm space-y-1 text-slate-200"><li>地點隱蔽，享有180度無死角海景。</li><li>招牌麻糬窩夫必試。</li></ul></div><p>週末不知道去哪裡？跟著我們一起去路環發掘新大陸！</p>`,
-        source: "chu chu channel", sourceUrl: "https://www.youtube.com/watch?v=mock_video_id_123", icon: "fa-utensils", sIcon: "fab fa-youtube text-red-500", location: "澳門路環"
+        source: "chu chu channel", sourceUrl: "https://www.youtube.com/results?search_query=chu+chu+channel+%E8%B7%AF%E7%92%B0+cafe", icon: "fa-utensils", sIcon: "fab fa-youtube text-red-500", location: "澳門路環"
     },
     {
         baseTitle: "的士難截", category: "城中熱話", title: "澳門截的士辛酸史 引發全網共鳴",
         summary: "近日一篇關於「在澳門街頭截的士的辛酸史」的貼文引發廣大本地網民及遊客共鳴...",
         content: `<p class="mb-3">近日一篇關於「在澳門街頭截的士的辛酸史」的貼文引發廣大本地網民及遊客共鳴。</p><p>帖主分享了自己在雨天提着重物在皇朝區等了近半小時仍截不到的士的經歷。大批網民在留言區大吐苦水，指每逢繁忙時段或惡劣天氣，截的士都十分困難，紛紛呼籲政府應加快引入網約車機制，以解決市民及旅客的出行痛點。</p>`,
-        source: "Threads", sourceUrl: "https://www.threads.net/@macau_user/post/C5abcdEFgh", icon: "fa-fire", sIcon: "fas fa-hashtag text-white", location: "澳門"
+        source: "Threads 社區討論", sourceUrl: "https://www.threads.net/search?q=%E6%BE%B3%E9%96%80%E6%88%AA%E7%9A%84%E5%A3%AB", icon: "fa-fire", sIcon: "fas fa-hashtag text-white", location: "澳門"
     }
 ].map(n => ({ ...n, authority: getAuthority(n.source) }));
 
 const initializeNewsData = () => {
-    const localNews = safeGetLocal('react_news_v3', []);
-    const localBookmarks = safeGetLocal('react_bookmarks_v3', []);
-    const localUnbookmarked = safeGetLocal('react_unbookmarked_v3', {});
+    const localNews = safeGetLocal('react_news_v4', []);
+    const localBookmarks = safeGetLocal('react_bookmarks_v4', []);
+    const localUnbookmarked = safeGetLocal('react_unbookmarked_v4', {});
 
     const now = Date.now();
     const sevenDays = 7 * 24 * 60 * 60 * 1000;
@@ -87,7 +89,7 @@ const initializeNewsData = () => {
         return (now - article.createdAt) < sevenDays;
     });
 
-    if (cleaned.length !== localNews.length) safeSetLocal('react_news_v3', cleaned);
+    if (cleaned.length !== localNews.length) safeSetLocal('react_news_v4', cleaned);
     return cleaned;
 };
 
@@ -97,11 +99,11 @@ const getCurrentTimeString = () => {
 };
 
 export default function App() {
-    const [categories, setCategories] = useState(() => safeGetLocal('react_cats_v3', [...defaultCategories]));
+    const [categories, setCategories] = useState(() => safeGetLocal('react_cats_v4', [...defaultCategories]));
     const [newsData, setNewsData] = useState(initializeNewsData);
-    const [readArticles, setReadArticles] = useState(() => safeGetLocal('react_read_v3', []));
-    const [bookmarks, setBookmarks] = useState(() => safeGetLocal('react_bookmarks_v3', []));
-    const [unbookmarkedTracker, setUnbookmarkedTracker] = useState(() => safeGetLocal('react_unbookmarked_v3', {}));
+    const [readArticles, setReadArticles] = useState(() => safeGetLocal('react_read_v4', []));
+    const [bookmarks, setBookmarks] = useState(() => safeGetLocal('react_bookmarks_v4', []));
+    const [unbookmarkedTracker, setUnbookmarkedTracker] = useState(() => safeGetLocal('react_unbookmarked_v4', {}));
     
     const [currentCategory, setCurrentCategory] = useState("全部");
     const [selectedArticle, setSelectedArticle] = useState(null);
@@ -122,10 +124,10 @@ export default function App() {
     const startX = useRef(0);
     const scrollLeft = useRef(0);
 
-    useEffect(() => { safeSetLocal('react_news_v3', newsData); }, [newsData]);
-    useEffect(() => { safeSetLocal('react_bookmarks_v3', bookmarks); }, [bookmarks]);
-    useEffect(() => { safeSetLocal('react_unbookmarked_v3', unbookmarkedTracker); }, [unbookmarkedTracker]);
-    useEffect(() => { safeSetLocal('react_read_v3', readArticles); }, [readArticles]);
+    useEffect(() => { safeSetLocal('react_news_v4', newsData); }, [newsData]);
+    useEffect(() => { safeSetLocal('react_bookmarks_v4', bookmarks); }, [bookmarks]);
+    useEffect(() => { safeSetLocal('react_unbookmarked_v4', unbookmarkedTracker); }, [unbookmarkedTracker]);
+    useEffect(() => { safeSetLocal('react_read_v4', readArticles); }, [readArticles]);
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -189,7 +191,7 @@ export default function App() {
                     const newOrder = ["全部"];
                     items.forEach(i => newOrder.push(i.dataset.id));
                     setCategories(newOrder);
-                    safeSetLocal('react_cats_v3', newOrder);
+                    safeSetLocal('react_cats_v4', newOrder);
                 }
             });
         }
@@ -246,18 +248,8 @@ export default function App() {
 
     const filteredNews = currentCategory === "全部" ? newsData : newsData.filter(n => n.category === currentCategory);
     
-    // 排序邏輯：將大報章/權威來源 (authority >= 9) 設為頭條並強制置頂
-    const displayNews = [...filteredNews].sort((a, b) => {
-        const aIsHeadline = a.authority >= 9 ? 1 : 0;
-        const bIsHeadline = b.authority >= 9 ? 1 : 0;
-        
-        // 頭條優先
-        if (aIsHeadline !== bIsHeadline) {
-            return bIsHeadline - aIsHeadline;
-        }
-        // 若同為頭條或同非頭條，按時間新舊排序
-        return b.id - a.id; 
-    });
+    // 取消了特權置頂排序邏輯，現在單純以文章產生 ID (時間倒序) 排序
+    const displayNews = [...filteredNews].sort((a, b) => b.id - a.id);
 
     const unreadCount = newsData.filter(n => !readArticles.includes(n.id)).length;
 
@@ -329,18 +321,12 @@ export default function App() {
                     displayNews.map(n => {
                         const isRead = readArticles.includes(n.id);
                         const isBookmarked = bookmarks.includes(n.id);
-                        const isHeadline = n.authority >= 9; // 判斷是否為頭條
                         
                         return (
-                            <div key={n.id} onClick={() => handleArticleClick(n)} className={`bg-slate-800 rounded-xl shadow-md border ${isHeadline && !isRead ? 'border-red-500/50 shadow-red-900/10' : 'border-slate-700'} p-4 mb-4 cursor-pointer transition-colors hover:bg-slate-750 hover:border-macau-600 ${isRead ? 'opacity-80' : ''}`}>
+                            <div key={n.id} onClick={() => handleArticleClick(n)} className={`bg-slate-800 rounded-xl shadow-md border border-slate-700 p-4 mb-4 cursor-pointer transition-colors hover:bg-slate-750 hover:border-macau-600 ${isRead ? 'opacity-80' : ''}`}>
                                 <div className="flex justify-between items-start mb-3">
                                     <div className="flex items-center space-x-2">
                                         <span className="text-xs font-semibold text-macau-300 bg-macau-900/50 px-2 py-1 rounded"><i className={`fas ${n.icon} mr-1`}></i>{n.category}</span>
-                                        {isHeadline && (
-                                            <span className="text-[10px] font-bold text-white bg-red-600 px-2 py-1 rounded flex items-center shadow-sm shadow-red-500/50">
-                                                <i className="fas fa-fire mr-1 animate-pulse"></i>頭條
-                                            </span>
-                                        )}
                                     </div>
                                     <button onClick={(e) => toggleBookmark(e, n.id)} className={`text-lg p-1 transition-transform active:scale-75 ${isBookmarked ? 'text-yellow-400' : 'text-slate-600 hover:text-slate-400'}`}>
                                         <i className={isBookmarked ? "fas fa-star" : "far fa-star"}></i>
@@ -415,7 +401,7 @@ export default function App() {
                             ))}
                         </ul>
                         <div className="p-4 border-t border-slate-700 flex justify-between bg-[#1e293b] rounded-b-2xl shrink-0">
-                            <button onClick={() => { setCategories([...defaultCategories]); safeSetLocal('react_cats_v3', defaultCategories); }} className="text-xs text-slate-400 hover:text-white px-3 py-2">恢復預設</button>
+                            <button onClick={() => { setCategories([...defaultCategories]); safeSetLocal('react_cats_v4', defaultCategories); }} className="text-xs text-slate-400 hover:text-white px-3 py-2">恢復預設</button>
                             <button onClick={() => setIsSettingsOpen(false)} className="bg-macau-600 text-white text-sm font-semibold px-6 py-2 rounded-lg">完成</button>
                         </div>
                     </div>

@@ -208,7 +208,7 @@ export default function App() {
                         <h1 className="text-xl font-bold tracking-wider flex items-center">
                             <i className="fas fa-newspaper mr-2 text-macau-100"></i>澳視天下
                             <span className="ml-2 text-[10px] bg-red-600 border border-red-800 px-1.5 py-0.5 rounded text-white font-mono tracking-tighter shadow-inner flex items-center">
-                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse mr-1"></span>AI Beta版
+                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse mr-1"></span>AI BETA
                             </span>
                         </h1>
                         <p className="text-[10px] text-macau-100 mt-1 opacity-80">{currentTime}</p>
@@ -289,11 +289,11 @@ export default function App() {
                             </div>
                         </div>
                         <div className="p-5 overflow-y-auto flex-1 no-scrollbar pb-10">
-                            <h1 className="text-xl font-bold text-white mb-4 leading-snug">{selectedArticle.title}</h1>
+                            <h1 className="text-xl font-bold text-white mb-4 leading-snug select-text">{selectedArticle.title}</h1>
                             
                             {/* Fact Check 警示標語 */}
                             {selectedArticle.authority < 5 && (
-                                <div className="bg-orange-900/30 border border-orange-800/50 text-orange-300 p-3 rounded-lg text-xs mb-5 flex items-start shadow-inner">
+                                <div className="bg-orange-900/30 border border-orange-800/50 text-orange-300 p-3 rounded-lg text-xs mb-5 flex items-start shadow-inner select-text">
                                     <i className="fas fa-exclamation-triangle mt-0.5 mr-2 text-orange-400"></i>
                                     <p><strong>社交平台資訊：</strong>此內容擷取自社交網絡，可能帶有個人立場或未經完全證實。Fact Check 建議：請以官方網站或主流媒體發佈之最終資訊為準。</p>
                                 </div>
@@ -303,7 +303,7 @@ export default function App() {
                                 <a href={selectedArticle.sourceUrl} target="_blank" rel="noreferrer" className="hover:text-macau-400 underline decoration-slate-500 underline-offset-2 flex items-center"><i className={`${selectedArticle.sourceIcon} mr-1`}></i>{selectedArticle.source} <i className="fas fa-external-link-alt ml-1.5 text-[10px] opacity-70"></i></a>
                                 <span><i className="far fa-clock mr-1"></i>{selectedArticle.time}</span>
                             </div>
-                            <div className="text-slate-300 text-sm leading-relaxed space-y-4" dangerouslySetInnerHTML={{ __html: selectedArticle.content }}></div>
+                            <div className="text-slate-300 text-sm leading-relaxed space-y-4 select-text" dangerouslySetInnerHTML={{ __html: selectedArticle.content }}></div>
                         </div>
                     </div>
                 </div>

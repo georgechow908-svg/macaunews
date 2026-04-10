@@ -47,7 +47,7 @@ const realNewsDatabase = [
     {
         baseTitle: "輕軌巴士轉乘", category: "澳門時事", title: "網傳輕軌同巴士終於有轉乘優惠？",
         summary: "網民熱議交通局即將推出輕軌轉乘巴士優惠，減輕市民出行負擔...",
-        content: `<p>網上群組熱烈討論即將推出的轉乘優惠，不少網民表示期待，但具體細節仍有待公佈。</p>`,
+        content: `<p class="mb-3">網民熱議交通局即將推出輕軌轉乘巴士優惠，減輕市民出行負擔。</p><p>網上群組熱烈討論即將推出的轉乘優惠，不少網民表示期待，但具體細節仍有待公佈。</p>`,
         source: "Facebook 澳門交通群組", sourceUrl: "#", icon: "fa-city", sIcon: "fab fa-facebook text-blue-500", location: "澳門"
     },
     {
@@ -65,7 +65,7 @@ const realNewsDatabase = [
     {
         baseTitle: "的士難截", category: "城中熱話", title: "澳門截的士辛酸史 引發全網共鳴",
         summary: "近日一篇關於「在澳門街頭截的士的辛酸史」的貼文引發廣大本地網民及遊客共鳴...",
-        content: `<p>帖主分享了自己在雨天提着重物在皇朝區等了近半小時仍截不到的士的經歷。網民呼籲政府加快引入網約車。</p>`,
+        content: `<p class="mb-3">近日一篇關於「在澳門街頭截的士的辛酸史」的貼文引發廣大本地網民及遊客共鳴。</p><p>帖主分享了自己在雨天提着重物在皇朝區等了近半小時仍截不到的士的經歷。大批網民在留言區大吐苦水，指每逢繁忙時段或惡劣天氣，截的士都十分困難，紛紛呼籲政府應加快引入網約車機制，以解決市民及旅客的出行痛點。</p>`,
         source: "Threads", sourceUrl: "https://www.threads.net/", icon: "fa-fire", sIcon: "fas fa-hashtag text-white", location: "澳門"
     }
 ].map(n => ({ ...n, authority: getAuthority(n.source) }));
@@ -330,18 +330,21 @@ export default function App() {
                         <div className="p-5 overflow-y-auto flex-1 no-scrollbar pb-10">
                             <h1 className="text-xl font-bold text-white mb-4 leading-snug select-text">{selectedArticle.title}</h1>
                             
-                            {selectedArticle.authority < 5 && (
-                                <div className="bg-orange-900/30 border border-orange-800/50 text-orange-300 p-3 rounded-lg text-xs mb-5 flex items-start shadow-inner select-text">
-                                    <i className="fas fa-exclamation-triangle mt-0.5 mr-2 text-orange-400"></i>
-                                    <p><strong>社交平台資訊：</strong>此內容擷取自社交網絡，可能帶有個人立場或未經完全證實。Fact Check 建議：請以官方網站或主流媒體發佈之最終資訊為準。</p>
-                                </div>
-                            )}
-
                             <div className="flex justify-between items-center text-xs text-slate-400 mb-6 border-b border-slate-700 pb-4">
                                 <a href={selectedArticle.sourceUrl} target="_blank" rel="noreferrer" className="hover:text-macau-400 underline decoration-slate-500 underline-offset-2 flex items-center"><i className={`${selectedArticle.sourceIcon} mr-1`}></i>{selectedArticle.source} <i className="fas fa-external-link-alt ml-1.5 text-[10px] opacity-70"></i></a>
                                 <span><i className="far fa-clock mr-1"></i>{selectedArticle.time}</span>
                             </div>
-                            <div className="text-slate-300 text-sm leading-relaxed space-y-4 select-text" dangerouslySetInnerHTML={{ __html: selectedArticle.content }}></div>
+
+                            {/* 內文移到上方優先閱讀 */}
+                            <div className="text-slate-300 text-sm leading-relaxed space-y-4 select-text mb-8" dangerouslySetInnerHTML={{ __html: selectedArticle.content }}></div>
+
+                            {/* Fact Check 警示標語移到底部 */}
+                            {selectedArticle.authority < 5 && (
+                                <div className="bg-orange-900/30 border border-orange-800/50 text-orange-300 p-3 rounded-lg text-xs flex items-start shadow-inner select-text">
+                                    <i className="fas fa-exclamation-triangle mt-0.5 mr-2 text-orange-400"></i>
+                                    <p><strong>社交平台資訊：</strong>此內容擷取自社交網絡，可能帶有個人立場或未經完全證實。Fact Check 建議：請以官方網站或主流媒體發佈之最終資訊為準。</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

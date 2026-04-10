@@ -7,19 +7,25 @@ const realNewsDatabase = [
     {
         category: "國際要聞", title: "聯合國示警暖化衝擊恐逾千年：地球熱量91%被海洋吸收",
         summary: "世界氣象組織（WMO）發布報告指出，地球能量失衡持續擴大，91%多餘熱能被海洋吸收...",
-        content: `<div class="bg-slate-700/50 p-4 rounded-lg mb-4"><h3 class="font-bold text-blue-400 mb-2"><i class="fas fa-list-ul mr-2"></i>新聞重點</h3><ul class="list-disc pl-5 text-sm space-y-1 text-slate-200"><li>過去11年是有紀錄以來最熱時期。</li><li>地球能量失衡創新高，超過91%多餘熱能被海洋吸收。</li></ul></div><p>專家呼籲各國設立具備行政權力的專責單位以推動氣候變遷調適行動。</p>`,
+        content: `<div class="bg-slate-700/50 p-4 rounded-lg mb-4"><h3 class="font-bold text-blue-400 mb-2"><i class="fas fa-list-ul mr-2"></i>新聞重點</h3><ul class="list-disc pl-5 text-sm space-y-1 text-slate-200"><li>過去11年是有紀錄以來最熱時期。</li><li>地球能量失衡創新高，超過91%多餘熱能被海洋吸收。</li></ul></div>
+        <p class="mb-3">世界氣象組織（WMO）的最新氣候報告揭示了令人擔憂的趨勢：海洋正以驚人的速度吸收因溫室氣體排放而產生的多餘熱能。這種熱量積累不僅導致海水體積膨脹，加速全球海平面上升，更對脆弱的海洋生態系統（如珊瑚礁）造成不可逆的破壞。</p>
+        <p>報告特別警告，由於海洋具有巨大的熱慣性，即使人類立刻停止所有溫室氣體排放，海洋的升溫與海平面上升趨勢仍將持續數個世紀甚至上千年。專家強烈呼籲各國政府必須立即設立具備實質行政權力的專責單位，加速推動氣候變遷的調適與減緩行動，以應對這場長期的氣候危機。</p>`,
         source: "關鍵評論網", sourceUrl: "https://www.thenewslens.com/article/266154", icon: "fa-globe-americas", sIcon: "fas fa-globe text-blue-400", location: "國際"
     },
     {
         category: "澳門時事", title: "澳門輕軌及公共巴士轉乘優惠預料今年內推出",
         summary: "交通事務局表示，為發揮軌道交通最大效益，爭取今年內推進落實輕軌與巴士轉乘優惠...",
-        content: `<div class="bg-slate-700/50 p-4 rounded-lg mb-4"><h3 class="font-bold text-macau-400 mb-2"><i class="fas fa-list-ul mr-2"></i>新聞重點</h3><ul class="list-disc pl-5 text-sm space-y-1 text-slate-200"><li>當局正積極研究並推進輕軌與巴士轉乘優惠措施。</li><li>預計今年第三季起輕軌將安裝支援二維碼支付的新閘機。</li></ul></div><p>六條輕軌線路形成內環與外環佈局，將大幅優化本澳交通網絡。</p>`,
+        content: `<div class="bg-slate-700/50 p-4 rounded-lg mb-4"><h3 class="font-bold text-macau-400 mb-2"><i class="fas fa-list-ul mr-2"></i>新聞重點</h3><ul class="list-disc pl-5 text-sm space-y-1 text-slate-200"><li>當局正積極研究並推進輕軌與巴士轉乘優惠措施。</li><li>預計今年第三季起輕軌將安裝支援二維碼支付的新閘機。</li></ul></div>
+        <p class="mb-3">為鼓勵市民使用綠色出行及舒緩路面交通擠塞，澳門交通事務局（DSAT）正加緊推動輕軌與公共巴士之間的轉乘優惠計劃。此舉旨在打破目前兩種公交系統各自獨立收費的局面，降低市民的出行成本。</p>
+        <p>當局指出，這項政策將配合即將到來的巴士服務合同更新，以及輕軌全線閘機升級（支援更多電子支付及二維碼乘車）同步落實。隨著輕軌石排灣線及橫琴線等新路網陸續投入服務，完善的轉乘機制將能有效發揮軌道交通「骨幹」及巴士「接駁」的互補作用，大幅優化本澳整體的立體交通網絡。</p>`,
         source: "濠遊天下 Macau", sourceUrl: "https://macauonjourney.com/", icon: "fa-city", sIcon: "fas fa-newspaper text-slate-300", location: "澳門"
     },
     {
         category: "數碼與科技", title: "韋伯望遠鏡重磅發現：微型星系為宇宙「黑暗時期」點亮曙光",
         summary: "JWST 觀測數據顯示，最微小的星系可能扮演了驅散宇宙迷霧、重新點燃光芒的關鍵角色...",
-        content: `<div class="bg-slate-700/50 p-4 rounded-lg mb-4"><h3 class="font-bold text-indigo-400 mb-2"><i class="fas fa-list-ul mr-2"></i>新聞重點</h3><ul class="list-disc pl-5 text-sm space-y-1 text-slate-200"><li>最新數據強烈證明，數量龐大的微小星系貢獻了大部分能量。</li></ul></div><p>這項發現改寫了我們對宇宙黎明的理解。</p>`,
+        content: `<div class="bg-slate-700/50 p-4 rounded-lg mb-4"><h3 class="font-bold text-indigo-400 mb-2"><i class="fas fa-list-ul mr-2"></i>新聞重點</h3><ul class="list-disc pl-5 text-sm space-y-1 text-slate-200"><li>最新數據強烈證明，數量龐大的微小星系貢獻了大部分能量。</li><li>解開了長久以來關於宇宙「再電離時期」能量來源的謎團。</li></ul></div>
+        <p class="mb-3">在宇宙大爆炸後的初期，宇宙曾被濃密的中性氫氣體所籠罩，光線無法穿透，這段時期被稱為宇宙的「黑暗時代」。天文學界長期以來一直在爭論：究竟是少數巨大的星系，還是大量微小的星系，提供了足夠的能量來游離這些氣體，讓宇宙重新變得透明（即再電離時期）？</p>
+        <p>借助詹姆斯·韋伯太空望遠鏡（JWST）前所未有的紅外線觀測能力，國際天文學團隊終於找到了決定性的證據。數據顯示，早期宇宙中存在著數量驚人的超微型星系，這些星系雖然體積小，卻能釋放出極高能量的游離光子。這項突破性發現證實了「微小星系是點亮早期宇宙主力」的假說，徹底改寫了人類對宇宙黎明時期星系演化的理解。</p>`,
         source: "大時事", sourceUrl: "https://bigtimes.net/archives/98495", icon: "fa-robot", sIcon: "fas fa-microchip text-indigo-400", location: "國際"
     }
 ];
@@ -52,8 +58,9 @@ export default function App() {
         return () => clearInterval(timer);
     }, []);
 
-    // 初次載入獲取新聞
+    // 初次載入獲取新聞及設定標題
     useEffect(() => {
+        document.title = "澳視天下 - AI Beta版"; // 動態修改瀏覽器分頁標題
         fetchLiveNews(true);
     }, []);
 

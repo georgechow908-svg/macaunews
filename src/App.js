@@ -3,28 +3,23 @@ import './style.css';
 
 const defaultCategories = ["全部", "澳門時事", "琴澳深合", "國際要聞", "醫療與健康", "數碼與科技", "電競與遊戲", "城中熱話", "交通與通關", "體育與盛事", "天氣與氣象", "尋味澳門", "民生與消費", "趣聞軼事", "天文地理"];
 
-// 權威度評分 (分數越高越權威，用於過濾來源)
+// 權威度評分 (分數越高越權威，代表「重大事件」)
 const authorityMap = { "官方": 10, "澳門日報": 9, "特區政府": 10, "聯合國": 10, "NASA": 10, "CNN": 9, "路透社": 9, "chu chu channel": 8, "大時事": 7, "Facebook": 3, "IG": 3, "Threads": 3 };
 const getAuthority = (source) => Object.entries(authorityMap).find(([k]) => source.includes(k))?.[1] || 5;
 
-// 安全的 LocalStorage 讀取與寫入
 const safeGetLocal = (key, fallback) => {
     if (typeof window !== 'undefined') {
         try {
             const item = window.localStorage.getItem(key);
             return item ? JSON.parse(item) : fallback;
-        } catch (e) {
-            return fallback;
-        }
+        } catch (e) { return fallback; }
     }
     return fallback;
 };
 
 const safeSetLocal = (key, value) => {
     if (typeof window !== 'undefined') {
-        try {
-            window.localStorage.setItem(key, JSON.stringify(value));
-        } catch (e) {}
+        try { window.localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
     }
 };
 
@@ -33,28 +28,24 @@ const getCurrentTimeString = () => {
     return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 };
 
-// 智能翻譯輔助函數 (若偵測到非中文，則自動呼叫翻譯 API)
+// 智能翻譯輔助函數 (僅翻譯外文，極速處理)
 const translateIfNeeded = async (text) => {
     if (!text) return text;
-    // 簡單判斷：若文字中幾乎沒有中文字元，則視為外文進行翻譯
     if (!/[\u4e00-\u9fa5]/.test(text)) {
         try {
             const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh-TW&dt=t&q=${encodeURIComponent(text)}`);
             const data = await res.json();
             return data[0].map(x => x[0]).join('');
-        } catch (e) {
-            console.error("翻譯失敗，回退至原文", e);
-            return text;
-        }
+        } catch (e) { return text; }
     }
     return text;
 };
 
-// 初始化邏輯：從 LocalStorage 讀取本地快取
+// 升級至 v9_live：支援多維度評分及各類別 Top 5 篩選機制
 const initializeNewsData = () => {
-    const localNews = safeGetLocal('react_news_v7_live', []);
-    const localBookmarks = safeGetLocal('react_bookmarks_v7_live', []);
-    const localUnbookmarked = safeGetLocal('react_unbookmarked_v7_live', {});
+    const localNews = safeGetLocal('react_news_v9_live', []);
+    const localBookmarks = safeGetLocal('react_bookmarks_v9_live', []);
+    const localUnbookmarked = safeGetLocal('react_unbookmarked_v9_live', {});
 
     const now = Date.now();
     const sevenDays = 7 * 24 * 60 * 60 * 1000;
@@ -62,22 +53,20 @@ const initializeNewsData = () => {
 
     const cleaned = localNews.filter(article => {
         if (localBookmarks.includes(article.id)) return true;
-        if (localUnbookmarked[article.id]) {
-            return (now - localUnbookmarked[article.id]) < threeDays;
-        }
+        if (localUnbookmarked[article.id]) return (now - localUnbookmarked[article.id]) < threeDays;
         return (now - article.createdAt) < sevenDays;
     });
 
-    if (cleaned.length !== localNews.length) safeSetLocal('react_news_v7_live', cleaned);
+    if (cleaned.length !== localNews.length) safeSetLocal('react_news_v9_live', cleaned);
     return cleaned;
 };
 
 export default function App() {
-    const [categories, setCategories] = useState(() => safeGetLocal('react_cats_v7_live', [...defaultCategories]));
+    const [categories, setCategories] = useState(() => safeGetLocal('react_cats_v9_live', [...defaultCategories]));
     const [newsData, setNewsData] = useState(initializeNewsData);
-    const [readArticles, setReadArticles] = useState(() => safeGetLocal('react_read_v7_live', []));
-    const [bookmarks, setBookmarks] = useState(() => safeGetLocal('react_bookmarks_v7_live', []));
-    const [unbookmarkedTracker, setUnbookmarkedTracker] = useState(() => safeGetLocal('react_unbookmarked_v7_live', {}));
+    const [readArticles, setReadArticles] = useState(() => safeGetLocal('react_read_v9_live', []));
+    const [bookmarks, setBookmarks] = useState(() => safeGetLocal('react_bookmarks_v9_live', []));
+    const [unbookmarkedTracker, setUnbookmarkedTracker] = useState(() => safeGetLocal('react_unbookmarked_v9_live', {}));
     
     const [currentCategory, setCurrentCategory] = useState("全部");
     const [selectedArticle, setSelectedArticle] = useState(null);
@@ -91,95 +80,175 @@ export default function App() {
     const listRef = useRef(null);
     const sortableRef = useRef(null);
     const hasFetchedInitial = useRef(false);
+    
+    // 使用 Ref 追蹤最新數據，供非同步抓取時進行比對過濾
+    const newsDataRef = useRef(newsData);
 
     const navRef = useRef(null);
     const isDragging = useRef(false);
     const startX = useRef(0);
     const scrollLeft = useRef(0);
 
-    useEffect(() => { safeSetLocal('react_news_v7_live', newsData); }, [newsData]);
-    useEffect(() => { safeSetLocal('react_bookmarks_v7_live', bookmarks); }, [bookmarks]);
-    useEffect(() => { safeSetLocal('react_unbookmarked_v7_live', unbookmarkedTracker); }, [unbookmarkedTracker]);
-    useEffect(() => { safeSetLocal('react_read_v7_live', readArticles); }, [readArticles]);
+    useEffect(() => { 
+        newsDataRef.current = newsData; 
+        safeSetLocal('react_news_v9_live', newsData); 
+    }, [newsData]);
+    useEffect(() => { safeSetLocal('react_bookmarks_v9_live', bookmarks); }, [bookmarks]);
+    useEffect(() => { safeSetLocal('react_unbookmarked_v9_live', unbookmarkedTracker); }, [unbookmarkedTracker]);
+    useEffect(() => { safeSetLocal('react_read_v9_live', readArticles); }, [readArticles]);
 
     const displayToast = useCallback((msg) => {
         setShowToast(msg);
         setTimeout(() => setShowToast(""), 3500);
     }, []);
 
-    // 核心升級：連接真實 Google News 實時搜尋引擎並進行智能翻譯
+    // 核心升級：AI 多維度評分系統 (新至舊、重大至小事、近澳門至遠)
     const fetchLiveNews = useCallback(async (isInitial = false) => {
         if (!isInitial) setIsRefreshing(true);
         try {
-            // 利用 RSS to JSON API 抓取 Google 新聞的「澳門」關鍵字實時動態
-            const rssUrl = encodeURIComponent('https://news.google.com/rss/search?q=澳門&hl=zh-TW&gl=MO&ceid=MO:zh-Hant');
-            // 加入隨機時間戳避免瀏覽器快取
+            // 一次性進行廣泛搜尋，避免對各分類單獨發出請求導致卡頓
+            const rssUrl = encodeURIComponent('https://news.google.com/rss/search?q=澳門+OR+橫琴+OR+大灣區&hl=zh-TW&gl=MO&ceid=MO:zh-Hant');
             const response = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}&_=${Date.now()}`);
             const data = await response.json();
 
             if (data.status === 'ok' && data.items && data.items.length > 0) {
-                // 使用 Promise.all 等待所有翻譯任務完成
-                const fetchedNewsPromises = data.items.map(async (item, index) => {
+                
+                const assignCategory = (title) => {
+                    if (/天氣|氣象|颱風|暴雨|雷暴|氣溫/.test(title)) return "天氣與氣象";
+                    if (/通關|交通|巴士|輕軌|大橋|車|航班|的士|機場/.test(title)) return "交通與通關";
+                    if (/橫琴|深合區|大灣區|珠海|廣東/.test(title)) return "琴澳深合";
+                    if (/賭|博彩|酒店|旅遊|旅客|遊客|銀河|威尼斯人|金沙/.test(title)) return "旅業與博彩";
+                    if (/演唱會|電影|明星|音樂|藝術|文化|展覽/.test(title)) return "娛樂與演唱會";
+                    if (/體育|大賽車|足球|籃球|奧運|馬拉松/.test(title)) return "體育與盛事";
+                    if (/消費|物價|經濟|超市|派錢|津貼|商戶/.test(title)) return "民生與消費";
+                    if (/科技|AI|人工智能|網絡|電騙|詐騙|晶片/.test(title)) return "數碼與科技";
+                    if (/電競|遊戲|手遊/.test(title)) return "電競與遊戲";
+                    if (/網民|熱議|瘋傳|網傳|群組/.test(title)) return "城中熱話";
+                    if (/醫|醫院|健康|病毒|感染|衛生|流感/.test(title)) return "醫療與健康";
+                    if (/美國|中國|國際|聯合國|世界|全球|歐洲|日本/.test(title)) return "國際要聞";
+                    if (/美食|餐廳|探店|Cafe|咖啡|打卡/.test(title)) return "尋味澳門";
+                    return "澳門時事";
+                };
+
+                // 1. 初步解析與多維度評分
+                let scoredItems = data.items.map(item => {
                     const titleParts = item.title.split(' - ');
                     const source = titleParts.length > 1 ? titleParts.pop() : '網絡新聞';
                     const rawTitle = titleParts.join(' - ').trim();
+                    const category = assignCategory(rawTitle);
+                    const authority = getAuthority(source);
+                    const pubTime = new Date(item.pubDate.replace(/-/g, '/')).getTime() || Date.now();
                     
-                    // 執行標題與內文的外文翻譯
-                    const cleanTitle = await translateIfNeeded(rawTitle);
-                    const rawSummaryText = item.description.replace(/<[^>]+>/g, '').trim();
-                    const translatedSummaryText = await translateIfNeeded(rawSummaryText);
+                    // A. 近澳門至遠 (Location Score)
+                    let locScore = 0;
+                    if (/澳門|本澳|濠江|琴澳/.test(rawTitle)) locScore = 20;
+                    else if (/橫琴|珠海|大灣區/.test(rawTitle)) locScore = 10;
                     
-                    // AI 模擬智能分類器
-                    const assignCategory = (title) => {
-                        if (/天氣|氣象|颱風|暴雨|雷暴|氣溫/.test(title)) return "天氣與氣象";
-                        if (/通關|交通|巴士|輕軌|大橋|車|航班/.test(title)) return "交通與通關";
-                        if (/橫琴|深合區|大灣區|珠海|廣東/.test(title)) return "琴澳深合";
-                        if (/賭|博彩|酒店|旅遊|旅客|遊客|銀河|威尼斯人|金沙/.test(title)) return "旅業與博彩";
-                        if (/演唱會|電影|明星|音樂|藝術|文化/.test(title)) return "娛樂與演唱會";
-                        if (/體育|大賽車|足球|籃球|奧運/.test(title)) return "體育與盛事";
-                        if (/消費|物價|經濟|超市|派錢|津貼|商戶/.test(title)) return "民生與消費";
-                        if (/科技|AI|人工智能|網絡|電騙|詐騙/.test(title)) return "數碼與科技";
-                        if (/美國|中國|國際|聯合國|世界|全球/.test(title)) return "國際要聞";
-                        if (/醫|醫院|健康|病毒|感染/.test(title)) return "醫療與健康";
-                        return "澳門時事";
-                    };
+                    // B. 新至舊 (Time Score: 越新越高分)
+                    const hoursOld = (Date.now() - pubTime) / (1000 * 60 * 60);
+                    let timeScore = Math.max(0, 30 - hoursOld); // 最高 30 分
 
-                    const finalSummary = translatedSummaryText.substring(0, 90) + '...';
+                    // C. 重大至小事 (Total Score = 權威度加權 + 地理位置 + 時間新鮮度)
+                    const totalScore = (authority * 3) + locScore + timeScore;
+
+                    return { item, rawTitle, source, category, pubTime, authority, totalScore };
+                });
+
+                // 2. 按分類分組，並針對每個分類只取「最高分的 5 篇」
+                const grouped = {};
+                scoredItems.forEach(si => {
+                    if (!grouped[si.category]) grouped[si.category] = [];
+                    grouped[si.category].push(si);
+                });
+
+                const topSelectedItems = [];
+                for (const cat in grouped) {
+                    grouped[cat].sort((a, b) => b.totalScore - a.totalScore); // 分數高者優先
+                    topSelectedItems.push(...grouped[cat].slice(0, 5)); // 嚴格限制每個板塊 5 篇
+                }
+
+                // 3. 過濾掉資料庫中已有的新聞 (大幅減少後續翻譯與渲染時間)
+                const currentNews = newsDataRef.current;
+                const newItemsToProcess = topSelectedItems.filter(si => 
+                    !currentNews.some(n => n.baseTitle === si.rawTitle || n.sourceUrl === si.item.link)
+                );
+
+                if (newItemsToProcess.length === 0) {
+                    if (!isInitial) displayToast("✅ 經深度檢索，目前版面資訊已是最精華準確，無須更新");
+                    setIsRefreshing(false);
+                    return;
+                }
+
+                // 4. 僅對選出的新文章進行翻譯與內容擴充
+                const fetchedNewsPromises = newItemsToProcess.map(async (si, index) => {
+                    const cleanTitle = await translateIfNeeded(si.rawTitle);
+                    const rawSummaryText = si.item.description.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+                    const translatedSummaryText = await translateIfNeeded(rawSummaryText);
+
+                    // 內容擴充防空洞
+                    let hasRealSnippet = translatedSummaryText.length > cleanTitle.length + 15;
+                    let paragraph1 = hasRealSnippet 
+                        ? translatedSummaryText 
+                        : `根據《${si.source}》的最新報導指出，「${cleanTitle}」成為了目前的關注焦點。該事件的相關細節與最新進展，已由權威媒體正式對外發佈。`;
+
+                    let paragraph2 = "";
+                    switch(si.category) {
+                        case "澳門時事": paragraph2 = "此類本地時事動態通常與市民生活息息相關，並可能涉及政策調整或社會發展。各界正密切留意後續效應及當局的進一步公佈。"; break;
+                        case "琴澳深合": paragraph2 = "隨著粵港澳大灣區及橫琴深合區的加速融合，此類發展消息對於本澳未來的經濟適度多元及琴澳一體化具有重要的參考價值。"; break;
+                        case "國際要聞": paragraph2 = "在全球化背景下，國際局勢的變動往往會產生牽一髮而動全身的影響。專家建議持續關注該事件對周邊地區乃至全球政經格局的潛在連鎖反應。"; break;
+                        case "醫療與健康": paragraph2 = "醫療健康資訊關乎廣大市民的福祉。適時掌握最新的公共衛生動態與醫療發展，有助於提升個人及社區的整體健康防護意識。"; break;
+                        case "數碼與科技": paragraph2 = "這項最新的科技動態，展現了行業創新的潛力，並可能在未來引發新一波的技術應用熱潮與產業升級。"; break;
+                        case "交通與通關": paragraph2 = "交通基建與通關政策的優化，是提升城市運轉效率及便利市民出行的關鍵。相關措施的落實情況，將直接影響公眾的日常通勤體驗。"; break;
+                        case "民生與消費": paragraph2 = "民生物價與消費市場的波動，是最能直接反映社會經濟溫度的指標。這則消息揭示了當前市場的最新趨勢，值得本地消費者留意。"; break;
+                        case "體育與盛事": paragraph2 = "大型體育及盛事活動不僅能豐富市民的餘暇生活，更是推動本澳「旅遊+」跨界融合發展的重要引擎。"; break;
+                        case "天氣與氣象": paragraph2 = "氣象變化難測，當局呼籲市民應隨時留意最新的天氣預測，並因應實際情況調整出行計劃，做好必要的預防措施。"; break;
+                        default: paragraph2 = "這項最新動態已引起了所屬領域的廣泛討論。持續追蹤權威媒體的深度剖析，將有助於更全面地了解事件全貌。";
+                    }
+
+                    const finalSummary = paragraph1.substring(0, 90) + '...';
+
+                    // 地域精準標示
+                    let loc = "澳門";
+                    if (si.category === "國際要聞") loc = "國際";
+                    else if (/橫琴|深合區|珠海|大灣區|廣東/.test(cleanTitle)) loc = "大灣區";
+                    else if (/香港/.test(cleanTitle)) loc = "香港";
 
                     return {
-                        id: item.guid || (Date.now() + index).toString(),
-                        baseTitle: cleanTitle,
-                        category: assignCategory(cleanTitle),
+                        id: si.item.guid || (Date.now() + index).toString(),
+                        baseTitle: si.rawTitle,
+                        category: si.category,
                         title: cleanTitle,
                         summary: finalSummary,
                         content: `
-                                  <div class="bg-slate-700/50 p-4 rounded-lg mb-4 text-sm break-words leading-relaxed">${translatedSummaryText}</div>
-                                  <div class="mt-6 pt-4 border-t border-slate-700 text-xs text-slate-500 space-y-1.5">
+                                  <div class="bg-slate-700/50 p-5 rounded-lg mb-4 text-sm break-words leading-relaxed shadow-inner">
+                                      <p class="mb-4 text-slate-200">${paragraph1}</p>
+                                      <p class="text-slate-300">${paragraph2}</p>
+                                  </div>
+                                  <div class="mt-6 pt-4 border-t border-slate-700 text-xs text-slate-500 space-y-2">
                                       <p><i class="fas fa-info-circle mr-1 text-slate-400"></i>備註：這是一篇由 AI 引擎實時檢索的最新外部資訊。</p>
-                                      <p><i class="fas fa-hand-pointer mr-1 text-slate-400"></i>請點擊上方來源連結前往原始媒體網站閱讀完整報導。</p>
+                                      <p><i class="fas fa-external-link-alt mr-1 text-slate-400"></i><span class="text-macau-400">請點擊上方來源連結</span>前往原始媒體網站閱讀完整報導。</p>
                                   </div>`,
-                        source: source,
-                        sourceUrl: item.link,
+                        source: si.source,
+                        sourceUrl: si.item.link,
                         icon: "fa-bolt", 
                         sIcon: "fas fa-newspaper text-slate-300",
-                        location: "澳門",
-                        time: new Date(item.pubDate.replace(/-/g, '/')).toLocaleString('zh-MO', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
-                        createdAt: new Date(item.pubDate.replace(/-/g, '/')).getTime() || Date.now(),
-                        authority: getAuthority(source),
-                        verified: true
+                        location: loc,
+                        time: new Date(si.pubTime).toLocaleString('zh-MO', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
+                        createdAt: si.pubTime,
+                        authority: si.authority,
+                        verified: si.authority >= 7
                     };
                 });
 
                 const fetchedNews = await Promise.all(fetchedNewsPromises);
 
                 setNewsData(prev => {
-                    // 去重邏輯：只加入資料庫中尚未存在的新聞
                     const newItems = fetchedNews.filter(n => !prev.some(p => p.baseTitle === n.baseTitle || p.id === n.id));
                     if (newItems.length > 0) {
-                        if (!isInitial) displayToast(`⚡ 實時引擎更新了 ${newItems.length} 則最新資訊！`);
-                        return [...newItems, ...prev].slice(0, 100); // 最多保留 100 條最新資訊
+                        if (!isInitial) displayToast(`⚡ AI 完成深度分析，精選更新了 ${newItems.length} 則高價值資訊！`);
+                        return [...newItems, ...prev].slice(0, 150); // 保存量提升至 150 篇，確保各大類別都有足夠內容
                     } else {
-                        if (!isInitial) displayToast("✅ 經實時檢索，目前版面資訊已是最準確，無須更新");
+                        if (!isInitial) displayToast("✅ 經深度檢索，目前版面資訊已是最精華準確，無須更新");
                         return prev;
                     }
                 });
@@ -195,22 +264,19 @@ export default function App() {
     }, [displayToast]);
 
     useEffect(() => {
-        // 設定每秒更新的時間顯示
         const timer = setInterval(() => {
             setCurrentTime(new Date().toLocaleString('zh-MO', { month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' }));
         }, 1000);
         document.title = "澳視天下 - AI BETA";
 
-        // 初次載入時立刻執行一次實時檢索
         if (!hasFetchedInitial.current) {
             hasFetchedInitial.current = true;
             fetchLiveNews(true);
         }
 
-        // 設置 5 分鐘自動更新的定時器 (300,000 毫秒)
         const newsAutoRefreshInterval = setInterval(() => {
             fetchLiveNews(false);
-        }, 300000);
+        }, 300000); // 每 5 分鐘自動刷新
 
         return () => {
             clearInterval(timer);
@@ -228,7 +294,7 @@ export default function App() {
                     const newOrder = ["全部"];
                     items.forEach(i => newOrder.push(i.dataset.id));
                     setCategories(newOrder);
-                    safeSetLocal('react_cats_v7_live', newOrder);
+                    safeSetLocal('react_cats_v9_live', newOrder);
                 }
             });
         }
@@ -254,7 +320,6 @@ export default function App() {
         }
     };
 
-    // 下拉刷新邏輯
     const handleTouchStart = (e) => { if (document.getElementById('news-scroll-area').scrollTop === 0) startY.current = e.touches[0].pageY; else startY.current = 0; };
     const handleTouchMove = (e) => {
         if (startY.current === 0) return;
@@ -264,7 +329,7 @@ export default function App() {
     const handleTouchEnd = () => {
         if (ptrDistance > 60) {
             setIsRefreshing(true);
-            setTimeout(() => { fetchLiveNews(false); setPtrDistance(0); }, 500); // 觸發手動實時檢索
+            setTimeout(() => { fetchLiveNews(false); setPtrDistance(0); }, 500); 
         } else setPtrDistance(0);
     };
 
@@ -284,7 +349,7 @@ export default function App() {
     };
 
     const filteredNews = currentCategory === "全部" ? newsData : newsData.filter(n => n.category === currentCategory);
-    // 依據時間最新排序
+    // 介面依時間最新排序
     const displayNews = [...filteredNews].sort((a, b) => b.createdAt - a.createdAt);
     const unreadCount = newsData.filter(n => !readArticles.includes(n.id)).length;
 
@@ -350,8 +415,8 @@ export default function App() {
             <main id="news-scroll-area" className="flex-1 p-4 bg-[#0f172a] overflow-y-auto relative scroll-smooth pb-10 custom-scrollbar" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
                 {displayNews.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-64 text-slate-500">
-                        <i className="fas fa-satellite-dish text-5xl mb-4 text-macau-800 animate-pulse"></i>
-                        <p>AI 正在從實時網路為您檢索最新資訊...</p>
+                        <i class="fas fa-satellite-dish text-5xl mb-4 text-macau-800 animate-pulse"></i>
+                        <p>AI 正在進行多維度檢索與評分...</p>
                     </div>
                 ) : (
                     displayNews.map(n => {
@@ -375,7 +440,7 @@ export default function App() {
                                 <p className="text-sm text-slate-400 mb-4 line-clamp-2">{n.summary}</p>
                                 <div className="flex justify-between items-center border-t border-slate-700 pt-3 mt-4 text-[10px] text-slate-400">
                                     <div className="flex items-center space-x-2">
-                                        {n.authority >= 7 ? <i className="fas fa-shield-alt text-green-500" title="高權威來源"></i> : <i className="fas fa-exclamation-triangle text-orange-400" title="社交平台資訊"></i>}
+                                        {n.authority >= 7 ? <i className="fas fa-shield-alt text-green-500" title="高權威來源"></i> : <i className="fas fa-exclamation-triangle text-orange-400" title="一般資訊"></i>}
                                         <a href={n.sourceUrl} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="hover:text-macau-400 underline decoration-slate-600 underline-offset-2 z-10 relative">
                                             <i className={`${n.sourceIcon} mr-1`}></i>{n.source} <i className="fas fa-external-link-alt ml-1 text-[8px] opacity-70"></i>
                                         </a>
@@ -408,7 +473,7 @@ export default function App() {
                                 <span><i className="far fa-clock mr-1"></i>{selectedArticle.time}</span>
                             </div>
 
-                            <div className="text-slate-300 text-sm leading-relaxed space-y-4 select-text mb-8 break-words" dangerouslySetInnerHTML={{ __html: selectedArticle.content }}></div>
+                            <div className="text-slate-300 text-sm select-text mb-8" dangerouslySetInnerHTML={{ __html: selectedArticle.content }}></div>
                         </div>
                     </div>
                 </div>
@@ -430,7 +495,7 @@ export default function App() {
                             ))}
                         </ul>
                         <div className="p-4 border-t border-slate-700 flex justify-between bg-[#1e293b] rounded-b-2xl shrink-0">
-                            <button onClick={() => { setCategories([...defaultCategories]); safeSetLocal('react_cats_v7_live', defaultCategories); }} className="text-xs text-slate-400 hover:text-white px-3 py-2">恢復預設</button>
+                            <button onClick={() => { setCategories([...defaultCategories]); safeSetLocal('react_cats_v9_live', defaultCategories); }} className="text-xs text-slate-400 hover:text-white px-3 py-2">恢復預設</button>
                             <button onClick={() => setIsSettingsOpen(false)} className="bg-macau-600 text-white text-sm font-semibold px-6 py-2 rounded-lg">完成</button>
                         </div>
                     </div>

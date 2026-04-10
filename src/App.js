@@ -33,11 +33,28 @@ const getCurrentTimeString = () => {
     return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 };
 
+// 智能翻譯輔助函數 (若偵測到非中文，則自動呼叫翻譯 API)
+const translateIfNeeded = async (text) => {
+    if (!text) return text;
+    // 簡單判斷：若文字中幾乎沒有中文字元，則視為外文進行翻譯
+    if (!/[\u4e00-\u9fa5]/.test(text)) {
+        try {
+            const res = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh-TW&dt=t&q=${encodeURIComponent(text)}`);
+            const data = await res.json();
+            return data[0].map(x => x[0]).join('');
+        } catch (e) {
+            console.error("翻譯失敗，回退至原文", e);
+            return text;
+        }
+    }
+    return text;
+};
+
 // 初始化邏輯：從 LocalStorage 讀取本地快取
 const initializeNewsData = () => {
-    const localNews = safeGetLocal('react_news_v6_live', []);
-    const localBookmarks = safeGetLocal('react_bookmarks_v6_live', []);
-    const localUnbookmarked = safeGetLocal('react_unbookmarked_v6_live', {});
+    const localNews = safeGetLocal('react_news_v7_live', []);
+    const localBookmarks = safeGetLocal('react_bookmarks_v7_live', []);
+    const localUnbookmarked = safeGetLocal('react_unbookmarked_v7_live', {});
 
     const now = Date.now();
     const sevenDays = 7 * 24 * 60 * 60 * 1000;
@@ -51,16 +68,16 @@ const initializeNewsData = () => {
         return (now - article.createdAt) < sevenDays;
     });
 
-    if (cleaned.length !== localNews.length) safeSetLocal('react_news_v6_live', cleaned);
+    if (cleaned.length !== localNews.length) safeSetLocal('react_news_v7_live', cleaned);
     return cleaned;
 };
 
 export default function App() {
-    const [categories, setCategories] = useState(() => safeGetLocal('react_cats_v6_live', [...defaultCategories]));
+    const [categories, setCategories] = useState(() => safeGetLocal('react_cats_v7_live', [...defaultCategories]));
     const [newsData, setNewsData] = useState(initializeNewsData);
-    const [readArticles, setReadArticles] = useState(() => safeGetLocal('react_read_v6_live', []));
-    const [bookmarks, setBookmarks] = useState(() => safeGetLocal('react_bookmarks_v6_live', []));
-    const [unbookmarkedTracker, setUnbookmarkedTracker] = useState(() => safeGetLocal('react_unbookmarked_v6_live', {}));
+    const [readArticles, setReadArticles] = useState(() => safeGetLocal('react_read_v7_live', []));
+    const [bookmarks, setBookmarks] = useState(() => safeGetLocal('react_bookmarks_v7_live', []));
+    const [unbookmarkedTracker, setUnbookmarkedTracker] = useState(() => safeGetLocal('react_unbookmarked_v7_live', {}));
     
     const [currentCategory, setCurrentCategory] = useState("全部");
     const [selectedArticle, setSelectedArticle] = useState(null);
@@ -80,17 +97,17 @@ export default function App() {
     const startX = useRef(0);
     const scrollLeft = useRef(0);
 
-    useEffect(() => { safeSetLocal('react_news_v6_live', newsData); }, [newsData]);
-    useEffect(() => { safeSetLocal('react_bookmarks_v6_live', bookmarks); }, [bookmarks]);
-    useEffect(() => { safeSetLocal('react_unbookmarked_v6_live', unbookmarkedTracker); }, [unbookmarkedTracker]);
-    useEffect(() => { safeSetLocal('react_read_v6_live', readArticles); }, [readArticles]);
+    useEffect(() => { safeSetLocal('react_news_v7_live', newsData); }, [newsData]);
+    useEffect(() => { safeSetLocal('react_bookmarks_v7_live', bookmarks); }, [bookmarks]);
+    useEffect(() => { safeSetLocal('react_unbookmarked_v7_live', unbookmarkedTracker); }, [unbookmarkedTracker]);
+    useEffect(() => { safeSetLocal('react_read_v7_live', readArticles); }, [readArticles]);
 
     const displayToast = useCallback((msg) => {
         setShowToast(msg);
         setTimeout(() => setShowToast(""), 3500);
     }, []);
 
-    // 核心升級：連接真實 Google News 實時搜尋引擎
+    // 核心升級：連接真實 Google News 實時搜尋引擎並進行智能翻譯
     const fetchLiveNews = useCallback(async (isInitial = false) => {
         if (!isInitial) setIsRefreshing(true);
         try {
@@ -101,11 +118,16 @@ export default function App() {
             const data = await response.json();
 
             if (data.status === 'ok' && data.items && data.items.length > 0) {
-                const fetchedNews = data.items.map((item, index) => {
-                    // 解析新聞標題與來源 (Google News 格式通常是 "標題 - 來源")
+                // 使用 Promise.all 等待所有翻譯任務完成
+                const fetchedNewsPromises = data.items.map(async (item, index) => {
                     const titleParts = item.title.split(' - ');
                     const source = titleParts.length > 1 ? titleParts.pop() : '網絡新聞';
-                    const cleanTitle = titleParts.join(' - ').trim();
+                    const rawTitle = titleParts.join(' - ').trim();
+                    
+                    // 執行標題與內文的外文翻譯
+                    const cleanTitle = await translateIfNeeded(rawTitle);
+                    const rawSummaryText = item.description.replace(/<[^>]+>/g, '').trim();
+                    const translatedSummaryText = await translateIfNeeded(rawSummaryText);
                     
                     // AI 模擬智能分類器
                     const assignCategory = (title) => {
@@ -122,17 +144,20 @@ export default function App() {
                         return "澳門時事";
                     };
 
-                    const rawSummary = item.description.replace(/<[^>]+>/g, '').trim();
+                    const finalSummary = translatedSummaryText.substring(0, 90) + '...';
 
                     return {
                         id: item.guid || (Date.now() + index).toString(),
                         baseTitle: cleanTitle,
                         category: assignCategory(cleanTitle),
                         title: cleanTitle,
-                        summary: rawSummary.substring(0, 90) + '...',
-                        content: `<p class="mb-3 font-bold text-macau-400">這是一篇由 AI 引擎實時檢索的最新外部資訊。</p>
-                                  <div class="bg-slate-700/50 p-4 rounded-lg mb-4 text-sm break-words">${item.description}</div>
-                                  <p class="text-xs text-slate-500">※ 請點擊下方來源連結前往原始媒體網站閱讀完整報導。</p>`,
+                        summary: finalSummary,
+                        content: `
+                                  <div class="bg-slate-700/50 p-4 rounded-lg mb-4 text-sm break-words leading-relaxed">${translatedSummaryText}</div>
+                                  <div class="mt-6 pt-4 border-t border-slate-700 text-xs text-slate-500 space-y-1.5">
+                                      <p><i class="fas fa-info-circle mr-1 text-slate-400"></i>備註：這是一篇由 AI 引擎實時檢索的最新外部資訊。</p>
+                                      <p><i class="fas fa-hand-pointer mr-1 text-slate-400"></i>請點擊上方來源連結前往原始媒體網站閱讀完整報導。</p>
+                                  </div>`,
                         source: source,
                         sourceUrl: item.link,
                         icon: "fa-bolt", 
@@ -144,6 +169,8 @@ export default function App() {
                         verified: true
                     };
                 });
+
+                const fetchedNews = await Promise.all(fetchedNewsPromises);
 
                 setNewsData(prev => {
                     // 去重邏輯：只加入資料庫中尚未存在的新聞
@@ -201,7 +228,7 @@ export default function App() {
                     const newOrder = ["全部"];
                     items.forEach(i => newOrder.push(i.dataset.id));
                     setCategories(newOrder);
-                    safeSetLocal('react_cats_v6_live', newOrder);
+                    safeSetLocal('react_cats_v7_live', newOrder);
                 }
             });
         }
@@ -403,7 +430,7 @@ export default function App() {
                             ))}
                         </ul>
                         <div className="p-4 border-t border-slate-700 flex justify-between bg-[#1e293b] rounded-b-2xl shrink-0">
-                            <button onClick={() => { setCategories([...defaultCategories]); safeSetLocal('react_cats_v6_live', defaultCategories); }} className="text-xs text-slate-400 hover:text-white px-3 py-2">恢復預設</button>
+                            <button onClick={() => { setCategories([...defaultCategories]); safeSetLocal('react_cats_v7_live', defaultCategories); }} className="text-xs text-slate-400 hover:text-white px-3 py-2">恢復預設</button>
                             <button onClick={() => setIsSettingsOpen(false)} className="bg-macau-600 text-white text-sm font-semibold px-6 py-2 rounded-lg">完成</button>
                         </div>
                     </div>
